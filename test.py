@@ -43,6 +43,24 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+        self.btn_start.clicked.connect(self.start_camera)
+        self.btn_stop.clicked.connect(self.stop_camera)
+        self.btn_snap.clicked.connect(self.snap_photo)
+        self.btn_stop.setEnabled(False)     #cant stop before starting
+
+    def start_camera(self):
+        self.label.setText("Camera Started")
+        self.btn_start.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+
+    def stop_camera(self):
+        self.btn_stop.setEnabled(False)
+        self.label.setText("Camera Stopped")
+        self.btn_start.setEnabled(True)
+
+    def snap_photo(self):
+        self.label.setText("Photo Snapped")
+    # Here you would add code to capture and save a photo from the camera feed
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

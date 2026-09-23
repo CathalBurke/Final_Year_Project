@@ -89,10 +89,11 @@ class MainWindow(QMainWindow):
         ##self.label.setText("Photo Snapped")
       if self.frame is None:
               return
-      os.makedirs("snaps", exist_ok=True)
-      filename = time.strftime("snaps/snap_%Y%m%d_%H%M%S.jpg")
+      os.makedirs("Captures", exist_ok=True)
+      filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
       cv2.imwrite(filename, self.frame)
       print("Photo saved as:", filename)   
+      self.statusBar().showMessage("Photo saved as: " + filename, 5000)  # Show message for 5 seconds
 
     def closeEvent(self, event):
         self.timer.stop()

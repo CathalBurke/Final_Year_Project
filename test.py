@@ -15,6 +15,8 @@ import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
+import os
+import time
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -49,9 +51,11 @@ class MainWindow(QMainWindow):
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
+        self.frame = None
         self.cap = None
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
+
 
     def start_camera(self):
         self.cap = cv2.VideoCapture(0)
@@ -71,6 +75,7 @@ class MainWindow(QMainWindow):
     def update_frame(self):
         ok, frame = self.cap.read()
         if ok:
+            self.frame = frame
             self.show_frame(frame)
 
     def show_frame(self, frame):
@@ -81,8 +86,13 @@ class MainWindow(QMainWindow):
         self.label.setPixmap(pix)
 
     def snap_photo(self):
-        self.label.setText("Photo Snapped")
-    # Here you would add code to capture and save a photo from the camera feed
+        ##self.label.setText("Photo Snapped")
+      if self.frame is None:
+              return
+      os.makedirs("snaps", exist_ok=True)
+      filename = time.strftime("snaps/snap_%Y%m%d_%H%M%S.jpg")
+      cv2.imwrite(filename, self.frame)
+      print("Photo saved as:", filename)   
 
     def closeEvent(self, event):
         self.timer.stop()

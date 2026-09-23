@@ -10,10 +10,11 @@ while True:
 cap.release(); cv2.destroyAllWindows()
 
 '''
-
+import cv2
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QImage, QPixmap
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -48,15 +49,36 @@ class MainWindow(QMainWindow):
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
+        self.cap = None
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_frame)
+
     def start_camera(self):
-        self.label.setText("Camera Started")
+        self.cap = cv2.VideoCapture(0)
+        self.timer.start(30)  # Update every 30 ms
+        # self.label.setText("Camera Started")
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
 
     def stop_camera(self):
+        self.timer.stop()
+        self.cap.release()
+        self.label.clear()
         self.btn_stop.setEnabled(False)
         self.label.setText("Camera Stopped")
         self.btn_start.setEnabled(True)
+
+    def update_frame(self):
+        ok, frame = self.cap.read()
+        if ok:
+            self.show_frame(frame)
+
+    def show_frame(self, frame):
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb.shape
+        img = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
+        pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio)
+        self.label.setPixmap(pix)
 
     def snap_photo(self):
         self.label.setText("Photo Snapped")

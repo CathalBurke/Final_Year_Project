@@ -84,6 +84,12 @@ class MainWindow(QMainWindow):
         self.label.setText("Photo Snapped")
     # Here you would add code to capture and save a photo from the camera feed
 
+    def closeEvent(self, event):
+        self.timer.stop()
+        if self.cap is not None:
+            self.cap.release()
+        event.accept()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()

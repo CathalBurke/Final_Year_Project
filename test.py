@@ -12,13 +12,29 @@ cap.release(); cv2.destroyAllWindows()
 '''
 
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
+        self.label = QLabel("Camera Stopped")
+        self.btn_start = QPushButton("Start Camera")
+        self.btn_stop = QPushButton("Stop Camera")
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.btn_start)
+        button_layout.addWidget(self.btn_stop)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addLayout(button_layout)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

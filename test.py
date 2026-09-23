@@ -56,6 +56,8 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
 
+        self.statusBar().showMessage("Ready", 5000)  # Show message for 5 seconds
+
 
     def start_camera(self):
         self.cap = cv2.VideoCapture(0)
@@ -63,6 +65,7 @@ class MainWindow(QMainWindow):
         # self.label.setText("Camera Started")
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
+        self.statusBar().showMessage("Camera Started", 5000)  # Show message for 5 seconds
 
     def stop_camera(self):
         self.timer.stop()
@@ -71,6 +74,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(False)
         self.label.setText("Camera Stopped")
         self.btn_start.setEnabled(True)
+        self.statusBar().showMessage("Camera Stopped", 5000)  # Show message for 5 seconds
 
     def update_frame(self):
         ok, frame = self.cap.read()

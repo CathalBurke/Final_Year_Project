@@ -1,7 +1,7 @@
 '''
 
 import cv2
-cap = cv2.VideoCapture(0)          # try 1 or 2 if 0 opens the wrong camera (e.g. a laptop's built-in one)
+cap = cv2.VideoCapture(0)          
 while True:
     ok, frame = cap.read()
     if not ok: break
@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         # self.label.setText("Camera Started")
         w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered ROI
+        self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered  GREEN ROI
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.statusBar().showMessage("Camera Started", 5000)  # Show message for 5 seconds

@@ -13,7 +13,7 @@ cap.release(); cv2.destroyAllWindows()
 import cv2
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
 import time
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.label = QLabel("Camera Stopped")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("background-color: #111")
+        self.label.installEventFilter(self)  # Install event filter for mouse events
 
         #BUTTONS FOR CAMERA CONTROL
         self.btn_start = QPushButton("Start Camera")
@@ -105,6 +106,15 @@ class MainWindow(QMainWindow):
         img = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
         pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio)
         self.label.setPixmap(pix)
+
+    def eventFilter(self, obj, event):
+        if obj is self.label:
+            if event.type() == QEvent.MouseButtonPress:
+                print("Press", event.position().toPoint())
+            elif event.type() == QEvent.MouseMove:
+                print("Move", event.position().toPoint())
+            elif event.type() == QEvent.MouseButtonRelease:
+                print("Release", event.position().toPoint())
 
     def snap_photo(self):
         ##self.label.setText("Photo Snapped")

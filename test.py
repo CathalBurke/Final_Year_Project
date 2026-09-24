@@ -21,6 +21,11 @@ import time
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        #VARIABLES
+        self.roi = None
+        self.cap = None
+        self.drag_start = None
+        self.frame = None
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -29,7 +34,7 @@ class MainWindow(QMainWindow):
         self.label = QLabel("Camera Stopped")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("background-color: #111")
-        self.label.installEventFilter(self)  # Install event filter for mouse events
+        
 
         #BUTTONS FOR CAMERA CONTROL
         self.btn_start = QPushButton("Start Camera")
@@ -58,16 +63,14 @@ class MainWindow(QMainWindow):
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
-        #VARIABLES
-        self.frame = None
-        self.roi = None
-        self.cap = None
 
         #TIMER FOR UPDATING FRAMES
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
 
         self.statusBar().showMessage("Ready", 5000)  # Show message for 5 seconds
+
+        self.label.installEventFilter(self)  # Install event filter for mouse events
 
 
     def start_camera(self):
@@ -107,19 +110,36 @@ class MainWindow(QMainWindow):
         pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio)
         self.label.setPixmap(pix)
 
+    def label_to_frame(self, point):
+        fh, fw = self.frame.shape[:2]                  # frame height, width
+        lw, lh = self.label.width(), self.label.height()
+        scale = min(lw / fw, lh / fh)                  # same scale show_frame used
+        off_x = (lw - fw * scale) / 2                  # empty bar on left
+        off_y = (lh - fh * scale) / 2                  # empty bar on top
+        x = int((point.x() - off_x) / scale)
+        y = int((point.y() - off_y) / scale)
+        x = max(0, min(x, fw - 1))                     # keep inside the frame
+        y = max(0, min(y, fh - 1))
+        return x, y
+
     def eventFilter(self, obj, event):
-        if obj is self.label:
+        if obj is self.label and self.frame is not None:
             if event.type() == QEvent.MouseButtonPress:
-                print("Press", event.position().toPoint())
-            elif event.type() == QEvent.MouseMove:
-                print("Move", event.position().toPoint())
-            elif event.type() == QEvent.MouseButtonRelease:
-                print("Release", event.position().toPoint())
+                self.drag_start = self.label_to_frame(event.position().toPoint())
+            elif event.type() == QEvent.MouseMove and self.drag_start:
+                x0, y0 = self.drag_start
+                x1, y1 = self.label_to_frame(event.position().toPoint())
+                self.roi = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
+            elif event.type() == QEvent.MouseButtonRelease and self.drag_start:
+                self.drag_start = None
+                self.statusBar().showMessage(f"Box set: {self.roi}", 5000)
+        return super().eventFilter(obj, event)
+        
 
     def snap_photo(self):
         ##self.label.setText("Photo Snapped")
       if self.frame is None:
-              return
+          return
       os.makedirs("Captures", exist_ok=True)
       filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
       cv2.imwrite(filename, self.frame)

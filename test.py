@@ -21,39 +21,48 @@ import time
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
+
+        #LABEL TO DISPLAY CAMERA FEED
         self.label = QLabel("Camera Stopped")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("background-color: #111")
 
-
+        #BUTTONS FOR CAMERA CONTROL
         self.btn_start = QPushButton("Start Camera")
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
 
+        #LAYOUTS
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.btn_start)
         button_layout.addWidget(self.btn_stop)
         button_layout.addWidget(self.btn_snap)
         
-
+        #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         layout.addLayout(button_layout)
 
+        #CONTAINER WIDGET AND SET THE LAYOUT
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+        #CONNECT BUTTONS TO FUNCTIONS
         self.btn_start.clicked.connect(self.start_camera)
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
+        #VARIABLES
         self.frame = None
         self.roi = None
         self.cap = None
+
+        #TIMER FOR UPDATING FRAMES
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
 
@@ -66,6 +75,7 @@ class MainWindow(QMainWindow):
         # self.label.setText("Camera Started")
         w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # GREEN RECTANGLE 
         self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered  GREEN ROI
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)

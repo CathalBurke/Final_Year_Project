@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
         self.frame = None
+        self.roi = None
         self.cap = None
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
@@ -63,6 +64,9 @@ class MainWindow(QMainWindow):
         self.cap = cv2.VideoCapture(0)
         self.timer.start(30)  # Update every 30 ms
         # self.label.setText("Camera Started")
+        w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered ROI
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.statusBar().showMessage("Camera Started", 5000)  # Show message for 5 seconds
@@ -80,7 +84,10 @@ class MainWindow(QMainWindow):
         ok, frame = self.cap.read()
         if ok:
             self.frame = frame
-            self.show_frame(frame)
+            display = frame.copy()
+            x1, y1, x2, y2 = self.roi
+            cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            self.show_frame(display)
 
     def show_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

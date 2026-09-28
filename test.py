@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
         self.cap = None
         self.drag_start = None
         self.frame = None
+        self.prev_roi = None
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -40,12 +41,14 @@ class MainWindow(QMainWindow):
         self.btn_start = QPushButton("Start Camera")
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
+        self.btn_settings = QPushButton("Settings")
 
         #LAYOUTS
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.btn_start)
         button_layout.addWidget(self.btn_stop)
         button_layout.addWidget(self.btn_snap)
+        button_layout.addWidget(self.btn_settings)
         
         #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
@@ -61,6 +64,7 @@ class MainWindow(QMainWindow):
         self.btn_start.clicked.connect(self.start_camera)
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_snap.clicked.connect(self.snap_photo)
+        self.btn_settings.clicked.connect(self.open_settings)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
 
@@ -72,7 +76,11 @@ class MainWindow(QMainWindow):
 
         self.label.installEventFilter(self)  # Install event filter for mouse events
 
+    def open_settings(self):
+        if self.cap is not None:
+            self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
 
+            
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
@@ -130,6 +138,7 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event):
         if obj is self.label and self.frame is not None:
             if event.type() == QEvent.MouseButtonPress:
+                self.prev_roi = self.roi                      # NEW: remember current box
                 self.drag_start = self.label_to_frame(event.position().toPoint())
             elif event.type() == QEvent.MouseMove and self.drag_start:
                 x0, y0 = self.drag_start
@@ -137,9 +146,14 @@ class MainWindow(QMainWindow):
                 self.roi = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
             elif event.type() == QEvent.MouseButtonRelease and self.drag_start:
                 self.drag_start = None
-                self.statusBar().showMessage(f"Box set: {self.roi}", 5000)
+                x1, y1, x2, y2 = self.roi                     # NEW: check the size
+                if x2 - x1 < 10 or y2 - y1 < 10:
+                    self.roi = self.prev_roi                  # too small, put old box back
+                    self.statusBar().showMessage("Box too small, kept previous box", 3000)
+                else:
+                    self.statusBar().showMessage(f"Box set: {self.roi}", 5000)
         return super().eventFilter(obj, event)
-        
+    
 
     def snap_photo(self):
         ##self.label.setText("Photo Snapped")

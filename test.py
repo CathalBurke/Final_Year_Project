@@ -74,16 +74,21 @@ class MainWindow(QMainWindow):
 
 
     def start_camera(self):
-        self.cap = cv2.VideoCapture(0)
-        self.timer.start(30)  # Update every 30 ms
-        # self.label.setText("Camera Started")
+        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        
+
         w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        # GREEN RECTANGLE 
-        self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered  GREEN ROI
+        # GREEN RECTANGLE
+        self.roi = (w//4, h//4, 3*w//4, 3*h//4)  # Centered GREEN ROI
+
+        self.timer.start(30)  # Update every 30 ms
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        self.statusBar().showMessage("Camera Started", 5000)  # Show message for 5 seconds
+        self.statusBar().showMessage(f"Camera Started at {w}x{h}", 5000)
 
     def stop_camera(self):
         self.timer.stop()

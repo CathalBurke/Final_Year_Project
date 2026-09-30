@@ -120,12 +120,12 @@ class MainWindow(QMainWindow):
             display = frame.copy()
             x1, y1, x2, y2 = self.roi
 
-            if self.chk_thresh.isChecked():                                              # NEW
-                roi = frame[y1:y2, x1:x2]                                                # NEW
-                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             # NEW
-                gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 # NEW
-                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY)  # NEW
-                display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           # NEW
+            if self.chk_thresh.isChecked():                                              
+                roi = frame[y1:y2, x1:x2]                                                
+                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
+                gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
+                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY)  
+                display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)
@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event):
         if obj is self.label and self.frame is not None:
             if event.type() == QEvent.MouseButtonPress:
-                self.prev_roi = self.roi                      # NEW: remember current box
+                self.prev_roi = self.roi                      # remember current box
                 self.drag_start = self.label_to_frame(event.position().toPoint())
             elif event.type() == QEvent.MouseMove and self.drag_start:
                 x0, y0 = self.drag_start
@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
                 self.roi = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
             elif event.type() == QEvent.MouseButtonRelease and self.drag_start:
                 self.drag_start = None
-                x1, y1, x2, y2 = self.roi                     # NEW: check the size
+                x1, y1, x2, y2 = self.roi                     # check the size
                 if x2 - x1 < 10 or y2 - y1 < 10:
                     self.roi = self.prev_roi                  # too small, put old box back
                     self.statusBar().showMessage("Box too small, kept previous box", 3000)

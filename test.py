@@ -12,7 +12,7 @@ cap.release(); cv2.destroyAllWindows()
 '''
 import cv2
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider
 from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
@@ -42,6 +42,10 @@ class MainWindow(QMainWindow):
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
         self.btn_settings = QPushButton("Settings")
+        self.chk_thresh = QCheckBox("Show threshold")      
+        self.slider = QSlider(Qt.Horizontal)               
+        self.slider.setRange(0, 255)                       
+        self.slider.setValue(127)                    
 
         #LAYOUTS
         button_layout = QHBoxLayout()
@@ -49,6 +53,8 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_stop)
         button_layout.addWidget(self.btn_snap)
         button_layout.addWidget(self.btn_settings)
+        button_layout.addWidget(self.chk_thresh)           
+        button_layout.addWidget(self.slider) 
         
         #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
@@ -113,6 +119,14 @@ class MainWindow(QMainWindow):
             self.frame = frame
             display = frame.copy()
             x1, y1, x2, y2 = self.roi
+
+            if self.chk_thresh.isChecked():                                              # NEW
+                roi = frame[y1:y2, x1:x2]                                                # NEW
+                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             # NEW
+                gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 # NEW
+                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY)  # NEW
+                display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           # NEW
+
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)
 

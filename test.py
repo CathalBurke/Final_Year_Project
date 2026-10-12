@@ -130,18 +130,19 @@ class MainWindow(QMainWindow):
             display = frame.copy()
             x1, y1, x2, y2 = self.roi
 
-            roi = frame[y1:y2, x1:x2]                                                
-            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
-            gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
-            _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY) 
+            roi = frame[y1:y2, x1:x2]     
+            if roi.size > 0:                                          
+                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
+                gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
+                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY) 
 
-            if self.chk_thresh.isChecked():                                               
-                display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
+                if self.chk_thresh.isChecked():                                               
+                    display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
 
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
-            self.parts = parts  # Store parts for later use in teach_model
-            cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in GREEN with offset
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
+                self.parts = parts  # Store parts for later use in teach_model
+                cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in GREEN with offset
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)

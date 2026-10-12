@@ -29,6 +29,8 @@ class MainWindow(QMainWindow):
         self.prev_roi = None
         self.model = None   #tought part
         self.parts = []
+        self.results = []
+        self.last_check = 0
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -145,17 +147,26 @@ class MainWindow(QMainWindow):
                 #cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  
 
 
-                fs = frame.shape[1] / 800            # text size grows with camera resolution
-                th = max(2, int(fs * 2))             # line thickness grows with it
-                for c in parts:
-                    x, y, w, h = cv2.boundingRect(c)
+                now = time.time()
+                if now - self.last_check >= 0.2:              # inspect 5 times a second
+                    self.last_check = now
+                    self.results = []
+                    for c in parts:
+                        x, y, w, h = cv2.boundingRect(c)
+                        score = None
+                        if self.model is not None:
+                            d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
+                            score = max(0, 100 * (1 - d))
+                        self.results.append((c, x, y, w, h, score))
+
+                fs = frame.shape[1] / 800
+                th = max(2, int(fs * 2))
+                for c, x, y, w, h, score in self.results:     # draw last results every frame
                     cv2.drawContours(display, [c + [x1, y1]], -1, (0, 255, 0), th)
-                    if self.model is not None:
-                        d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
-                        score = max(0, 100 * (1 - d))
+                    if score is not None:
                         cv2.rectangle(display, (x1 + x, y1 + y), (x1 + x + w, y1 + y + h), (0, 255, 0), th)
-                        cv2.putText(display, f"{score:.1f}%", (x1 + x, y1 + y - int(10 * fs)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 255, 0), th)
+                        cv2.putText(display, f"{score:.0f}%", (x1 + x, y1 + y - int(10 * fs)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 255, 0), th)  
                   
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)

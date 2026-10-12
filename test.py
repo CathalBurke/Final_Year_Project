@@ -125,11 +125,12 @@ class MainWindow(QMainWindow):
             display = frame.copy()
             x1, y1, x2, y2 = self.roi
 
-            if self.chk_thresh.isChecked():                                              
-                roi = frame[y1:y2, x1:x2]                                                
-                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
-                gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
-                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY)  
+            roi = frame[y1:y2, x1:x2]                                                
+            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
+            gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
+            _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY) 
+
+            if self.chk_thresh.isChecked():                                               
                 display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)

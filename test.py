@@ -89,6 +89,11 @@ class MainWindow(QMainWindow):
             
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
+        if not self.cap.isOpened():  # Check if the camera opened successfully
+            self.statusBar().showMessage("Failed to open camera", 5000)
+            return
+        
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -171,13 +176,13 @@ class MainWindow(QMainWindow):
 
     def snap_photo(self):
         ##self.label.setText("Photo Snapped")
-      if self.frame is None:
-          return
-      os.makedirs("Captures", exist_ok=True)
-      filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
-      cv2.imwrite(filename, self.frame)
-      print("Photo saved as:", filename)   
-      self.statusBar().showMessage("Photo saved as: " + filename, 5000)  # Show message for 5 seconds
+        if self.frame is None:
+            return
+        os.makedirs("Captures", exist_ok=True)
+        filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
+        cv2.imwrite(filename, self.frame)
+        print("Photo saved as:", filename)   
+        self.statusBar().showMessage("Photo saved as: " + filename, 5000)  # Show message for 5 seconds
 
     def closeEvent(self, event):
         self.timer.stop()

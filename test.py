@@ -27,6 +27,8 @@ class MainWindow(QMainWindow):
         self.drag_start = None
         self.frame = None
         self.prev_roi = None
+        self.model = None   #tought part
+        self.parts = []
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -42,7 +44,8 @@ class MainWindow(QMainWindow):
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
         self.btn_settings = QPushButton("Settings")
-        self.chk_thresh = QCheckBox("Show threshold")      
+        self.chk_thresh = QCheckBox("Show threshold")
+        self.btn_teach = QPushButton("Teach")      
         self.slider = QSlider(Qt.Horizontal)               
         self.slider.setRange(0, 255)                       
         self.slider.setValue(127)                    
@@ -55,6 +58,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_settings)
         button_layout.addWidget(self.chk_thresh)           
         button_layout.addWidget(self.slider) 
+        button_layout.addWidget(self.btn_teach)  
         
         #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
@@ -71,6 +75,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_settings.clicked.connect(self.open_settings)
+        self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
 
@@ -135,10 +140,24 @@ class MainWindow(QMainWindow):
 
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
+            self.parts = parts  # Store parts for later use in teach_model
             cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in GREEN with offset
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)
+
+
+
+    def teach_model(self):
+        if not self.parts:
+            self.statusBar().showMessage("No parts detected to teach", 5000)
+            return
+        self.model = max(self.parts, key=cv2.contourArea)
+        area = int (cv2.contourArea(self.model))
+        self.statusBar().showMessage(f"Part Trained with area: {area}", 5000)
+
+
+    
 
     def show_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

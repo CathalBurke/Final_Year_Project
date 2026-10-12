@@ -134,7 +134,8 @@ class MainWindow(QMainWindow):
                 display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
 
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(display, contours, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in RED with offset
+            parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
+            cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in GREEN with offset
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)

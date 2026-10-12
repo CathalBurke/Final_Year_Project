@@ -142,7 +142,21 @@ class MainWindow(QMainWindow):
                 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
                 self.parts = parts  # Store parts for later use in teach_model
-                cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  # Draw contours in GREEN with offset
+                #cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  
+
+
+                fs = frame.shape[1] / 800            # text size grows with camera resolution
+                th = max(2, int(fs * 2))             # line thickness grows with it
+                for c in parts:
+                    x, y, w, h = cv2.boundingRect(c)
+                    cv2.drawContours(display, [c + [x1, y1]], -1, (0, 255, 0), th)
+                    if self.model is not None:
+                        d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
+                        score = max(0, 100 * (1 - d))
+                        cv2.rectangle(display, (x1 + x, y1 + y), (x1 + x + w, y1 + y + h), (0, 255, 0), th)
+                        cv2.putText(display, f"{score:.1f}%", (x1 + x, y1 + y - int(10 * fs)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 255, 0), th)
+                  
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)

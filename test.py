@@ -210,7 +210,7 @@ class MainWindow(QMainWindow):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb.shape
         img = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
-        pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio)
+        pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.label.setPixmap(pix)
 
     def label_to_frame(self, point):

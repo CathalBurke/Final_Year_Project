@@ -171,21 +171,23 @@ class MainWindow(QMainWindow):
                     self.results = []
                     for c in parts:
                         x, y, w, h = cv2.boundingRect(c)
+                        rect = cv2.minAreaRect(c)
                         score = None
                         if self.model is not None:
                             d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
                             score = max(0, 100 * (1 - d))
-                        self.results.append((c, x, y, w, h, score))
+                        self.results.append((c, x, y, w, h, rect, score))
 
                 fs = frame.shape[1] / 800
                 th = max(2, int(fs * 2))
-                for c, x, y, w, h, score in self.results:     # draw last results every frame
+                for c, x, y, w, h, rect, score in self.results:     # draw last results every frame
                     colour = (0, 255, 0)                                       # green = pass
                     if score is not None and score < self.accept_slider.value():
                         colour = (0, 0, 255)                                   # red = fail
                     cv2.drawContours(display, [c + [x1, y1]], -1, colour, th)
                     if score is not None:
-                        cv2.rectangle(display, (x1 + x, y1 + y), (x1 + x + w, y1 + y + h), colour, th)
+                        box = cv2.boxPoints(rect).astype("int32") + [x1, y1]   # 4 corners of rotated box
+                        cv2.drawContours(display, [box], -1, colour, th)
                         cv2.putText(display, f"{score:.0f}%", (x1 + x, y1 + y - int(10 * fs)),
                                     cv2.FONT_HERSHEY_SIMPLEX, fs, colour, th)
                   

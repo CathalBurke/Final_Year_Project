@@ -50,7 +50,11 @@ class MainWindow(QMainWindow):
         self.btn_teach = QPushButton("Teach")      
         self.slider = QSlider(Qt.Horizontal)               
         self.slider.setRange(0, 255)                       
-        self.slider.setValue(127)                    
+        self.slider.setValue(127)
+        self.accept_slider = QSlider(Qt.Horizontal)
+        self.accept_slider.setRange(0, 100)
+        self.accept_slider.setValue(80)
+        self.lbl_accept = QLabel("Accept: 80%")
 
         #LAYOUTS
         button_layout = QHBoxLayout()
@@ -60,7 +64,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_settings)
         button_layout.addWidget(self.chk_thresh)           
         button_layout.addWidget(self.slider) 
-        button_layout.addWidget(self.btn_teach)  
+        button_layout.addWidget(self.btn_teach) 
+        button_layout.addWidget(self.lbl_accept)
+        button_layout.addWidget(self.accept_slider) 
         
         #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
@@ -79,6 +85,8 @@ class MainWindow(QMainWindow):
         self.btn_settings.clicked.connect(self.open_settings)
         self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
+
+        self.accept_slider.valueChanged.connect(lambda v: self.lbl_accept.setText(f"Accept: {v}%"))                    
 
 
         #TIMER FOR UPDATING FRAMES
@@ -172,11 +180,14 @@ class MainWindow(QMainWindow):
                 fs = frame.shape[1] / 800
                 th = max(2, int(fs * 2))
                 for c, x, y, w, h, score in self.results:     # draw last results every frame
-                    cv2.drawContours(display, [c + [x1, y1]], -1, (0, 255, 0), th)
+                    colour = (0, 255, 0)                                       # green = pass
+                    if score is not None and score < self.accept_slider.value():
+                        colour = (0, 0, 255)                                   # red = fail
+                    cv2.drawContours(display, [c + [x1, y1]], -1, colour, th)
                     if score is not None:
-                        cv2.rectangle(display, (x1 + x, y1 + y), (x1 + x + w, y1 + y + h), (0, 255, 0), th)
+                        cv2.rectangle(display, (x1 + x, y1 + y), (x1 + x + w, y1 + y + h), colour, th)
                         cv2.putText(display, f"{score:.0f}%", (x1 + x, y1 + y - int(10 * fs)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 255, 0), th)  
+                                    cv2.FONT_HERSHEY_SIMPLEX, fs, colour, th)
                   
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)

@@ -31,6 +31,8 @@ class MainWindow(QMainWindow):
         self.parts = []
         self.results = []
         self.last_check = 0
+        self.model_area = None   # area of the taught part
+        
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -173,22 +175,26 @@ class MainWindow(QMainWindow):
                         x, y, w, h = cv2.boundingRect(c)
                         rect = cv2.minAreaRect(c)
                         score = None
+                        size_ok = True
                         if self.model is not None:
                             d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
                             score = max(0, 100 * (1 - d))
-                        self.results.append((c, x, y, w, h, rect, score))
+                            area = cv2.contourArea(c)
+                            size_ok = abs(area - self.model_area) / self.model_area < 0.1
+                        self.results.append((c, x, y, w, h, rect, score, size_ok))
 
                 fs = frame.shape[1] / 800
                 th = max(2, int(fs * 2))
-                for c, x, y, w, h, rect, score in self.results:     # draw last results every frame
+                for c, x, y, w, h, rect, score, size_ok in self.results:     # draw last results every frame
                     colour = (0, 255, 0)                                       # green = pass
-                    if score is not None and score < self.accept_slider.value():
+                    if score is not None and score < self.accept_slider.value() or not size_ok:
                         colour = (0, 0, 255)                                   # red = fail
                     cv2.drawContours(display, [c + [x1, y1]], -1, colour, th)
                     if score is not None:
                         box = cv2.boxPoints(rect).astype("int32") + [x1, y1]   # 4 corners of rotated box
                         cv2.drawContours(display, [box], -1, colour, th)
-                        cv2.putText(display, f"{score:.0f}%", (x1 + x, y1 + y - int(10 * fs)),
+                        label = f"{score:.0f}%" if size_ok else f"{score:.0f}% SIZE DOESNT MATCH"
+                        cv2.putText(display, label, (x1 + x, y1 + y - int(10 * fs)),
                                     cv2.FONT_HERSHEY_SIMPLEX, fs, colour, th)
                   
 
@@ -202,6 +208,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No parts detected to teach", 5000)
             return
         self.model = max(self.parts, key=cv2.contourArea)
+        self.model_area = cv2.contourArea(self.model)
         area = int (cv2.contourArea(self.model))
         self.statusBar().showMessage(f"Part Trained with area: {area}", 5000)
 

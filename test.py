@@ -142,7 +142,17 @@ class MainWindow(QMainWindow):
                     display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
 
                 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                parts = [c for c in contours if cv2.contourArea(c) > 500]  # Filter small contours
+
+                rh, rw = mask.shape                              # height and width of the box
+                parts = []
+                for c in contours:
+                    if cv2.contourArea(c) < 500:
+                        continue                                 # too small, dust or noise
+                    x, y, w, h = cv2.boundingRect(c)
+                    if x <= 1 or y <= 1 or x + w >= rw - 1 or y + h >= rh - 1:
+                        continue                                 # touches the box edge, finger or cable
+                    parts.append(c)
+
                 self.parts = parts  # Store parts for later use in teach_model
                 #cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  
 

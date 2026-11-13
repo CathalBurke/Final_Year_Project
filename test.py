@@ -27,6 +27,12 @@ class MainWindow(QMainWindow):
         self.drag_start = None
         self.frame = None
         self.prev_roi = None
+        self.model = None   #tought part
+        self.parts = []
+        self.results = []
+        self.last_check = 0
+        self.model_area = None   # area of the taught part
+        
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Camera Viewer")
         self.resize(800, 600)
@@ -42,10 +48,15 @@ class MainWindow(QMainWindow):
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
         self.btn_settings = QPushButton("Settings")
-        self.chk_thresh = QCheckBox("Show threshold")      
+        self.chk_thresh = QCheckBox("Show threshold")
+        self.btn_teach = QPushButton("Teach")      
         self.slider = QSlider(Qt.Horizontal)               
         self.slider.setRange(0, 255)                       
-        self.slider.setValue(127)                    
+        self.slider.setValue(127)
+        self.accept_slider = QSlider(Qt.Horizontal)
+        self.accept_slider.setRange(0, 100)
+        self.accept_slider.setValue(80)
+        self.lbl_accept = QLabel("Accept: 80%")
 
         #LAYOUTS
         button_layout = QHBoxLayout()
@@ -55,6 +66,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_settings)
         button_layout.addWidget(self.chk_thresh)           
         button_layout.addWidget(self.slider) 
+        button_layout.addWidget(self.btn_teach) 
+        button_layout.addWidget(self.lbl_accept)
+        button_layout.addWidget(self.accept_slider) 
         
         #VIDEO DISPLAY LAYOUT
         layout = QVBoxLayout()
@@ -71,7 +85,10 @@ class MainWindow(QMainWindow):
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_snap.clicked.connect(self.snap_photo)
         self.btn_settings.clicked.connect(self.open_settings)
+        self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
+
+        self.accept_slider.valueChanged.connect(lambda v: self.lbl_accept.setText(f"Accept: {v}%"))                    
 
 
         #TIMER FOR UPDATING FRAMES
@@ -89,6 +106,11 @@ class MainWindow(QMainWindow):
             
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
+        if not self.cap.isOpened():  # Check if the camera opened successfully
+            self.statusBar().showMessage("Failed to open camera", 5000)
+            return
+        
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -120,21 +142,84 @@ class MainWindow(QMainWindow):
             display = frame.copy()
             x1, y1, x2, y2 = self.roi
 
-            if self.chk_thresh.isChecked():                                              
-                roi = frame[y1:y2, x1:x2]                                                
+            roi = frame[y1:y2, x1:x2]     
+            if roi.size > 0:                                          
                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)                             
                 gray = cv2.GaussianBlur(gray, (5, 5), 0)                                 
-                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY)  
-                display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
+                _, mask = cv2.threshold(gray, self.slider.value(), 255, cv2.THRESH_BINARY) 
+
+                if self.chk_thresh.isChecked():                                               
+                    display[y1:y2, x1:x2] = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)           
+
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                rh, rw = mask.shape                              # height and width of the box
+                parts = []
+                for c in contours:
+                    if cv2.contourArea(c) < 500:
+                        continue                                 # too small, dust or noise
+                    x, y, w, h = cv2.boundingRect(c)
+                    if x <= 1 or y <= 1 or x + w >= rw - 1 or y + h >= rh - 1:
+                        continue                                 # touches the box edge, finger or cable
+                    parts.append(c)
+
+                self.parts = parts  # Store parts for later use in teach_model
+                #cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  
+
+
+                now = time.time()
+                if now - self.last_check >= 0.2:              # inspect 5 times a second
+                    self.last_check = now
+                    self.results = []
+                    for c in parts:
+                        x, y, w, h = cv2.boundingRect(c)
+                        rect = cv2.minAreaRect(c)
+                        score = None
+                        size_ok = True
+                        if self.model is not None:
+                            d = cv2.matchShapes(self.model, c, cv2.CONTOURS_MATCH_I1, 0.0)
+                            score = max(0, 100 * (1 - d))
+                            area = cv2.contourArea(c)
+                            size_ok = abs(area - self.model_area) / self.model_area < 0.1
+                        self.results.append((c, x, y, w, h, rect, score, size_ok))
+
+                fs = frame.shape[1] / 800
+                th = max(2, int(fs * 2))
+                for c, x, y, w, h, rect, score, size_ok in self.results:     # draw last results every frame
+                    colour = (0, 255, 0)                                       # green = pass
+                    if score is not None and score < self.accept_slider.value() or not size_ok:
+                        colour = (0, 0, 255)                                   # red = fail
+                    cv2.drawContours(display, [c + [x1, y1]], -1, colour, th)
+                    if score is not None:
+                        box = cv2.boxPoints(rect).astype("int32") + [x1, y1]   # 4 corners of rotated box
+                        cv2.drawContours(display, [box], -1, colour, th)
+                        label = f"{score:.0f}%" if size_ok else f"{score:.0f}% SIZE DOESNT MATCH"
+                        cv2.putText(display, label, (x1 + x, y1 + y - int(10 * fs)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, fs, colour, th)
+                  
 
             cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 2)
             self.show_frame(display)
+
+
+
+    def teach_model(self):
+        if not self.parts:
+            self.statusBar().showMessage("No parts detected to teach", 5000)
+            return
+        self.model = max(self.parts, key=cv2.contourArea)
+        self.model_area = cv2.contourArea(self.model)
+        area = int (cv2.contourArea(self.model))
+        self.statusBar().showMessage(f"Part Trained with area: {area}", 5000)
+
+
+    
 
     def show_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb.shape
         img = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
-        pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio)
+        pix = QPixmap.fromImage(img).scaled(self.label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.label.setPixmap(pix)
 
     def label_to_frame(self, point):
@@ -171,13 +256,13 @@ class MainWindow(QMainWindow):
 
     def snap_photo(self):
         ##self.label.setText("Photo Snapped")
-      if self.frame is None:
-          return
-      os.makedirs("Captures", exist_ok=True)
-      filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
-      cv2.imwrite(filename, self.frame)
-      print("Photo saved as:", filename)   
-      self.statusBar().showMessage("Photo saved as: " + filename, 5000)  # Show message for 5 seconds
+        if self.frame is None:
+            return
+        os.makedirs("Captures", exist_ok=True)
+        filename = time.strftime("Captures/img_%d%m%Y_%H%M%S.jpg")
+        cv2.imwrite(filename, self.frame)
+        print("Photo saved as:", filename)   
+        self.statusBar().showMessage("Photo saved as: " + filename, 5000)  # Show message for 5 seconds
 
     def closeEvent(self, event):
         self.timer.stop()

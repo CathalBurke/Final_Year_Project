@@ -17,6 +17,7 @@ from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
 import time
+import numpy as np
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -47,6 +48,8 @@ class MainWindow(QMainWindow):
         self.btn_start = QPushButton("Start Camera")
         self.btn_stop = QPushButton("Stop Camera")
         self.btn_snap = QPushButton("Snap Photo")
+        self.btn_save = QPushButton("Save Part")
+        self.btn_load = QPushButton("Load Part")
         self.btn_settings = QPushButton("Settings")
         self.chk_thresh = QCheckBox("Show threshold")
         self.btn_teach = QPushButton("Teach")      
@@ -63,6 +66,8 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_start)
         button_layout.addWidget(self.btn_stop)
         button_layout.addWidget(self.btn_snap)
+        button_layout.addWidget(self.btn_save)
+        button_layout.addWidget(self.btn_load)
         button_layout.addWidget(self.btn_settings)
         button_layout.addWidget(self.chk_thresh)           
         button_layout.addWidget(self.slider) 
@@ -84,6 +89,8 @@ class MainWindow(QMainWindow):
         self.btn_start.clicked.connect(self.start_camera)
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_snap.clicked.connect(self.snap_photo)
+        self.btn_save.clicked.connect(self.save_part)
+        self.btn_load.clicked.connect(self.load_part)
         self.btn_settings.clicked.connect(self.open_settings)
         self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
@@ -212,8 +219,24 @@ class MainWindow(QMainWindow):
         area = int (cv2.contourArea(self.model))
         self.statusBar().showMessage(f"Part Trained with area: {area}", 5000)
 
+    def save_part(self):
+        if self.model is None:
+            self.statusBar().showMessage("Teach a part before saving", 3000)
+            return
+        os.makedirs("Models", exist_ok=True)
+        np.save("Models/taught_part.npy", self.model)
+        self.statusBar().showMessage("Part saved to Models/taught_part.npy", 5000)
 
-    
+
+    def load_part(self):
+        path = "Models/taught_part.npy"
+        if not os.path.exists(path):
+            self.statusBar().showMessage("No saved part found", 3000)
+            return
+        self.model = np.load(path)
+        self.model_area = cv2.contourArea(self.model)
+        self.statusBar().showMessage(f"Part loaded with area: {int(self.model_area)}", 5000)
+
 
     def show_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

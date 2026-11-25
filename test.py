@@ -12,7 +12,7 @@ cap.release(); cv2.destroyAllWindows()
 '''
 import cv2
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy
 from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
@@ -35,13 +35,15 @@ class MainWindow(QMainWindow):
         self.model_area = None   # area of the taught part
         
         #WINDOW TITLE AND SIZE
-        self.setWindowTitle("Camera Viewer")
-        self.resize(800, 600)
+        self.setWindowTitle("Vision Inspection")
+        self.resize(1440, 900)
 
         #LABEL TO DISPLAY CAMERA FEED
         self.label = QLabel("Camera Stopped")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("background-color: #111")
+        self.label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)  # Allow resizing
+        self.label.setMinimumSize(320,180)
         
 
         #BUTTONS FOR CAMERA CONTROL
@@ -60,30 +62,57 @@ class MainWindow(QMainWindow):
         self.accept_slider.setRange(0, 100)
         self.accept_slider.setValue(80)
         self.lbl_accept = QLabel("Accept: 80%")
-
-        #LAYOUTS
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.btn_start)
-        button_layout.addWidget(self.btn_stop)
-        button_layout.addWidget(self.btn_snap)
-        button_layout.addWidget(self.btn_save)
-        button_layout.addWidget(self.btn_load)
-        button_layout.addWidget(self.btn_settings)
-        button_layout.addWidget(self.chk_thresh)           
-        button_layout.addWidget(self.slider) 
-        button_layout.addWidget(self.btn_teach) 
-        button_layout.addWidget(self.lbl_accept)
-        button_layout.addWidget(self.accept_slider) 
         
-        #VIDEO DISPLAY LAYOUT
-        layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        layout.addLayout(button_layout)
+        #LEFT PANEL - CAMERA
+        cam_box = QGroupBox("Camera")
+        cam_layout = QVBoxLayout(cam_box)
+        cam_layout.addWidget(self.btn_start)
+        cam_layout.addWidget(self.btn_stop)
+        cam_layout.addWidget(self.btn_snap)
+        cam_layout.addWidget(self.btn_settings)
+
+        left_panel = QWidget()
+        left_panel.setFixedWidth(236)
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.addWidget(cam_box)
+        left_layout.addStretch()
+
+        #RIGHT PANEL - INSPECTION
+        image_box = QGroupBox("Image")
+        image_layout = QVBoxLayout(image_box)
+        image_layout.addWidget(self.chk_thresh)
+        image_layout.addWidget(self.slider)
+
+        teach_box = QGroupBox("Teach")
+        teach_layout = QVBoxLayout(teach_box)
+        teach_layout.addWidget(self.btn_teach)
+        teach_layout.addWidget(self.btn_save)
+        teach_layout.addWidget(self.btn_load)
+
+        tol_box = QGroupBox("Tolerances")
+        tol_layout = QVBoxLayout(tol_box)
+        tol_layout.addWidget(self.lbl_accept)
+        tol_layout.addWidget(self.accept_slider)
+
+        right_panel = QWidget()
+        right_panel.setFixedWidth(330)
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.addWidget(image_box)
+        right_layout.addWidget(teach_box)
+        right_layout.addWidget(tol_box)
+        right_layout.addStretch()
+
+        #MAIN LAYOUT - LEFT, FEED, RIGHT
+        main_layout = QHBoxLayout()
+        main_layout.addWidget(left_panel)
+        main_layout.addWidget(self.label, stretch=1)
+        main_layout.addWidget(right_panel)
 
         #CONTAINER WIDGET AND SET THE LAYOUT
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(main_layout)
         self.setCentralWidget(container)
+        
 
         #CONNECT BUTTONS TO FUNCTIONS
         self.btn_start.clicked.connect(self.start_camera)
@@ -296,5 +325,5 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec())

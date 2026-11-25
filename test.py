@@ -12,7 +12,7 @@ cap.release(); cv2.destroyAllWindows()
 '''
 import cv2
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy, QStackedWidget, QButtonGroup, QListWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy, QStackedWidget, QButtonGroup, QListWidget, QProgressBar
 from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
@@ -158,9 +158,20 @@ class MainWindow(QMainWindow):
         checks_box = QGroupBox("Checks")
         checks_layout = QVBoxLayout(checks_box)
         self.lbl_shape = QLabel("Shape match: --")
-        self.lbl_size = QLabel("Size: --")
-        checks_layout.addWidget(self.lbl_shape)
-        checks_layout.addWidget(self.lbl_size)
+        self.bar_shape = QProgressBar()
+        self.bar_shape.setRange(0, 100)
+        self.bar_shape.setTextVisible(False)
+        self.lbl_shape_limit = QLabel("Accept at 80% or more")
+
+        self.lbl_size = QLabel("Size vs model: --")
+        self.bar_size = QProgressBar()
+        self.bar_size.setRange(0, 30)
+        self.bar_size.setTextVisible(False)
+        self.lbl_size_limit = QLabel("Allowed within ±10% of taught area")
+
+        for w in (self.lbl_shape, self.bar_shape, self.lbl_shape_limit,
+                  self.lbl_size, self.bar_size, self.lbl_size_limit):
+            checks_layout.addWidget(w)
 
         run_right = QWidget()
         run_right_layout = QVBoxLayout(run_right)
@@ -262,6 +273,20 @@ class MainWindow(QMainWindow):
             self.lbl_result.setText("NG")
             self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800; color: #FF6B5E;")
             self.lbl_reason.setText(f"{len(fails)} part(s) {reason}")
+
+        worst = fails[0] if fails else min(self.results, key=lambda r: r[6])
+        score = worst[6]
+        dev = 100 * (cv2.contourArea(worst[0]) - self.model_area) / self.model_area
+        shape_ok = score >= limit
+        size_ok = worst[7]
+        self.lbl_shape.setText(f"Shape match: {score:.0f}%   {'PASS' if shape_ok else 'FAIL'}")
+        self.bar_shape.setValue(int(score))
+        self.lbl_shape_limit.setText(f"Accept at {limit}% or more")
+        self.lbl_size.setText(f"Size vs model: {dev:+.1f}%   {'PASS' if size_ok else 'FAIL'}")
+        self.bar_size.setValue(min(30, int(abs(dev))))
+        self.set_bar_colour(self.bar_shape, shape_ok)
+        self.set_bar_colour(self.bar_size, size_ok)
+        
         if self.box_was_empty:                 # a new part has arrived, count it once
             if ok:
                 self.count_ok += 1
@@ -279,6 +304,10 @@ class MainWindow(QMainWindow):
         self.count_ok = 0
         self.count_ng = 0
         self.update_counts() 
+
+    def set_bar_colour(self, bar, ok):
+        colour = "#8A939B" if ok else "#FF6B5E"
+        bar.setStyleSheet(f"QProgressBar::chunk {{ background: {colour}; }}")
 
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)

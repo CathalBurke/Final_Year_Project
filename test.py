@@ -12,7 +12,7 @@ cap.release(); cv2.destroyAllWindows()
 '''
 import cv2
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy, QStackedWidget, QButtonGroup
 from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
@@ -102,15 +102,75 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(tol_box)
         right_layout.addStretch()
 
+        #RUN MODE PANELS (placeholders, filled in later)
+        result_box = QGroupBox("Result")
+        result_layout = QVBoxLayout(result_box)
+        self.lbl_result = QLabel("--")
+        result_layout.addWidget(self.lbl_result)
+
+        counts_box = QGroupBox("Counts")
+        counts_layout = QVBoxLayout(counts_box)
+        self.lbl_counts = QLabel("Inspected 0 · OK 0 · NG 0")
+        counts_layout.addWidget(self.lbl_counts)
+
+        run_left = QWidget()
+        run_left_layout = QVBoxLayout(run_left)
+        run_left_layout.addWidget(result_box)
+        run_left_layout.addWidget(counts_box)
+        run_left_layout.addStretch()
+
+        checks_box = QGroupBox("Checks")
+        checks_layout = QVBoxLayout(checks_box)
+        self.lbl_shape = QLabel("Shape match: --")
+        self.lbl_size = QLabel("Size: --")
+        checks_layout.addWidget(self.lbl_shape)
+        checks_layout.addWidget(self.lbl_size)
+
+        run_right = QWidget()
+        run_right_layout = QVBoxLayout(run_right)
+        run_right_layout.addWidget(checks_box)
+        run_right_layout.addStretch()
+
+        #STACKS - PAGE 0 = SETUP, PAGE 1 = RUN
+        self.left_stack = QStackedWidget()
+        self.left_stack.setFixedWidth(236)
+        self.left_stack.addWidget(left_panel)
+        self.left_stack.addWidget(run_left)
+
+        self.right_stack = QStackedWidget()
+        self.right_stack.setFixedWidth(330)
+        self.right_stack.addWidget(right_panel)
+        self.right_stack.addWidget(run_right)
+
+        #MODE BAR - SETUP / RUN
+        self.btn_setup = QPushButton("Setup")
+        self.btn_run = QPushButton("Run")
+        self.btn_setup.setCheckable(True)
+        self.btn_run.setCheckable(True)
+        self.btn_setup.setChecked(True)
+        mode_group = QButtonGroup(self)
+        mode_group.addButton(self.btn_setup)
+        mode_group.addButton(self.btn_run)
+
+        mode_bar = QHBoxLayout()
+        mode_bar.addWidget(self.btn_setup)
+        mode_bar.addWidget(self.btn_run)
+        mode_bar.addStretch()
+
         #MAIN LAYOUT - LEFT, FEED, RIGHT
         main_layout = QHBoxLayout()
-        main_layout.addWidget(left_panel)
+        main_layout.addWidget(self.left_stack)
         main_layout.addWidget(self.label, stretch=1)
-        main_layout.addWidget(right_panel)
+        main_layout.addWidget(self.right_stack)
+
+        #OUTER LAYOUT - MODE BAR ON TOP, MAIN BELOW
+        outer_layout = QVBoxLayout()
+        outer_layout.addLayout(mode_bar)
+        outer_layout.addLayout(main_layout)
 
         #CONTAINER WIDGET AND SET THE LAYOUT
         container = QWidget()
-        container.setLayout(main_layout)
+        container.setLayout(outer_layout)
         self.setCentralWidget(container)
         
 
@@ -121,6 +181,8 @@ class MainWindow(QMainWindow):
         self.btn_save.clicked.connect(self.save_part)
         self.btn_load.clicked.connect(self.load_part)
         self.btn_settings.clicked.connect(self.open_settings)
+        self.btn_setup.clicked.connect(lambda: self.set_mode(0))
+        self.btn_run.clicked.connect(lambda: self.set_mode(1))
         self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 
@@ -139,6 +201,11 @@ class MainWindow(QMainWindow):
         if self.cap is not None:
             self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
 
+    def set_mode(self, page):
+        self.left_stack.setCurrentIndex(page)
+        self.right_stack.setCurrentIndex(page)
+        mode = "Setup" if page == 0 else "Run"
+        self.statusBar().showMessage(f"{mode} mode", 3000)
             
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)

@@ -33,6 +33,9 @@ class MainWindow(QMainWindow):
         self.results = []
         self.last_check = 0
         self.model_area = None   # area of the taught part
+        self.count_ok = 0
+        self.count_ng = 0
+        self.box_was_empty = True  # Track if the box was empty in the previous frame
         
         #WINDOW TITLE AND SIZE
         self.setWindowTitle("Vision Inspection")
@@ -62,7 +65,8 @@ class MainWindow(QMainWindow):
         self.accept_slider.setRange(0, 100)
         self.accept_slider.setValue(80)
         self.lbl_accept = QLabel("Accept: 80%")
-                #SETUP STEP PAGES - ONE GROUP PER STEP, SHOWN ON THE RIGHT
+        
+        #SETUP STEP PAGES - ONE GROUP PER STEP, SHOWN ON THE RIGHT
         cam_box = QGroupBox("1 · Camera")
         cam_layout = QVBoxLayout(cam_box)
         cam_layout.addWidget(self.btn_start)
@@ -125,16 +129,25 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(QLabel("Setup steps"))
         left_layout.addWidget(self.step_list)
 
-        #RUN MODE PANELS (placeholders, filled in later)
+        #RUN MODE PANELS
         result_box = QGroupBox("Result")
         result_layout = QVBoxLayout(result_box)
         self.lbl_result = QLabel("--")
+        self.lbl_result.setAlignment(Qt.AlignCenter)
+        self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800;")
+        self.lbl_reason = QLabel("Waiting for a part")
+        self.lbl_reason.setAlignment(Qt.AlignCenter)
         result_layout.addWidget(self.lbl_result)
+        result_layout.addWidget(self.lbl_reason)
 
         counts_box = QGroupBox("Counts")
         counts_layout = QVBoxLayout(counts_box)
-        self.lbl_counts = QLabel("Inspected 0 · OK 0 · NG 0")
+        self.lbl_counts = QLabel()
+        self.btn_reset = QPushButton("Reset counts")
         counts_layout.addWidget(self.lbl_counts)
+        counts_layout.addWidget(self.btn_reset)
+
+        
 
         run_left = QWidget()
         run_left_layout = QVBoxLayout(run_left)
@@ -204,6 +217,8 @@ class MainWindow(QMainWindow):
         self.btn_save.clicked.connect(self.save_part)
         self.btn_load.clicked.connect(self.load_part)
         self.btn_settings.clicked.connect(self.open_settings)
+        self.btn_reset.clicked.connect(self.reset_counts)
+        self.update_counts()   # show zeros at start
         self.btn_setup.clicked.connect(lambda: self.set_mode(0))
         self.btn_run.clicked.connect(lambda: self.set_mode(1))
         self.step_list.currentRowChanged.connect(self.step_stack.setCurrentIndex)
@@ -230,7 +245,41 @@ class MainWindow(QMainWindow):
         self.right_stack.setCurrentIndex(page)
         mode = "Setup" if page == 0 else "Run"
         self.statusBar().showMessage(f"{mode} mode", 3000)
-            
+
+    def judge(self):
+        if not self.results:
+            self.box_was_empty = True          # box is empty, ready for the next part
+            return
+        limit = self.accept_slider.value()
+        fails = [r for r in self.results if r[6] < limit or not r[7]]
+        ok = len(fails) == 0
+        if ok:
+            self.lbl_result.setText("OK")
+            self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800; color: #43D17A;")
+            self.lbl_reason.setText(f"{len(self.results)} part(s) pass")
+        else:
+            reason = "out of size" if not fails[0][7] else "below shape limit"
+            self.lbl_result.setText("NG")
+            self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800; color: #FF6B5E;")
+            self.lbl_reason.setText(f"{len(fails)} part(s) {reason}")
+        if self.box_was_empty:                 # a new part has arrived, count it once
+            if ok:
+                self.count_ok += 1
+            else:
+                self.count_ng += 1
+            self.box_was_empty = False
+            self.update_counts()
+
+    def update_counts(self):
+        total = self.count_ok + self.count_ng
+        yield_pct = 100 * self.count_ok / total if total else 0
+        self.lbl_counts.setText(f"Inspected: {total}\nOK: {self.count_ok}\nNG: {self.count_ng}\nYield: {yield_pct:.1f}%")
+
+    def reset_counts(self):
+        self.count_ok = 0
+        self.count_ng = 0
+        self.update_counts() 
+
     def start_camera(self):
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
@@ -293,6 +342,7 @@ class MainWindow(QMainWindow):
                 self.parts = parts  # Store parts for later use in teach_model
                 #cv2.drawContours(display, parts, -1, (0, 255, 0), 2, offset=(x1, y1))  
 
+                
 
                 now = time.time()
                 if now - self.last_check >= 0.2:              # inspect 5 times a second
@@ -309,6 +359,9 @@ class MainWindow(QMainWindow):
                             area = cv2.contourArea(c)
                             size_ok = abs(area - self.model_area) / self.model_area < 0.1
                         self.results.append((c, x, y, w, h, rect, score, size_ok))
+
+                    if self.model is not None and self.left_stack.currentIndex() == 1:
+                        self.judge()
 
                 fs = frame.shape[1] / 800
                 th = max(2, int(fs * 2))

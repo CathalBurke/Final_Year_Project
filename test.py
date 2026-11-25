@@ -12,7 +12,7 @@ cap.release(); cv2.destroyAllWindows()
 '''
 import cv2
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy, QStackedWidget, QButtonGroup
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QSlider, QGroupBox, QSizePolicy, QStackedWidget, QButtonGroup, QListWidget
 from PySide6.QtCore import QEvent, Qt, QTimer, QPoint
 from PySide6.QtGui import QImage, QPixmap
 import os
@@ -62,45 +62,68 @@ class MainWindow(QMainWindow):
         self.accept_slider.setRange(0, 100)
         self.accept_slider.setValue(80)
         self.lbl_accept = QLabel("Accept: 80%")
-        
-        #LEFT PANEL - CAMERA
-        cam_box = QGroupBox("Camera")
+                #SETUP STEP PAGES - ONE GROUP PER STEP, SHOWN ON THE RIGHT
+        cam_box = QGroupBox("1 · Camera")
         cam_layout = QVBoxLayout(cam_box)
         cam_layout.addWidget(self.btn_start)
         cam_layout.addWidget(self.btn_stop)
         cam_layout.addWidget(self.btn_snap)
         cam_layout.addWidget(self.btn_settings)
+        cam_layout.addStretch()
 
-        left_panel = QWidget()
-        left_panel.setFixedWidth(236)
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.addWidget(cam_box)
-        left_layout.addStretch()
+        area_box = QGroupBox("2 · Inspection area")
+        area_layout = QVBoxLayout(area_box)
+        area_help = QLabel("Drag a box on the live image around the area you want to inspect.")
+        area_help.setWordWrap(True)
+        area_layout.addWidget(area_help)
+        area_layout.addStretch()
 
-        #RIGHT PANEL - INSPECTION
-        image_box = QGroupBox("Image")
+        image_box = QGroupBox("3 · Image")
         image_layout = QVBoxLayout(image_box)
         image_layout.addWidget(self.chk_thresh)
         image_layout.addWidget(self.slider)
+        image_layout.addStretch()
 
-        teach_box = QGroupBox("Teach")
+        teach_box = QGroupBox("4 · Teach")
         teach_layout = QVBoxLayout(teach_box)
         teach_layout.addWidget(self.btn_teach)
         teach_layout.addWidget(self.btn_save)
         teach_layout.addWidget(self.btn_load)
+        teach_layout.addStretch()
 
-        tol_box = QGroupBox("Tolerances")
+        tol_box = QGroupBox("5 · Tolerances")
         tol_layout = QVBoxLayout(tol_box)
         tol_layout.addWidget(self.lbl_accept)
         tol_layout.addWidget(self.accept_slider)
+        tol_layout.addStretch()
+
+        cal_box = QGroupBox("6 · Calibrate")
+        cal_layout = QVBoxLayout(cal_box)
+        cal_help = QLabel("Grid calibration will be added once the conveyor is assembled.")
+        cal_help.setWordWrap(True)
+        cal_layout.addWidget(cal_help)
+        cal_layout.addStretch()
+
+        self.step_stack = QStackedWidget()
+        for box in (cam_box, area_box, image_box, teach_box, tol_box, cal_box):
+            self.step_stack.addWidget(box)
 
         right_panel = QWidget()
-        right_panel.setFixedWidth(330)
         right_layout = QVBoxLayout(right_panel)
-        right_layout.addWidget(image_box)
-        right_layout.addWidget(teach_box)
-        right_layout.addWidget(tol_box)
-        right_layout.addStretch()
+        right_layout.addWidget(self.step_stack)
+
+        #SETUP STEP LIST - LEFT
+        self.step_list = QListWidget()
+        for name in ["1 · Camera", "2 · Inspection area", "3 · Image", "4 · Teach", "5 · Tolerances", "6 · Calibrate"]:
+            self.step_list.addItem(name)
+        cal_item = self.step_list.item(5)
+        cal_item.setFlags(cal_item.flags() & ~Qt.ItemIsEnabled)   # greyed out until grid calibration exists
+        self.step_list.setCurrentRow(0)
+
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.addWidget(QLabel("Setup steps"))
+        left_layout.addWidget(self.step_list)
 
         #RUN MODE PANELS (placeholders, filled in later)
         result_box = QGroupBox("Result")
@@ -183,6 +206,7 @@ class MainWindow(QMainWindow):
         self.btn_settings.clicked.connect(self.open_settings)
         self.btn_setup.clicked.connect(lambda: self.set_mode(0))
         self.btn_run.clicked.connect(lambda: self.set_mode(1))
+        self.step_list.currentRowChanged.connect(self.step_stack.setCurrentIndex)
         self.btn_teach.clicked.connect(self.teach_model)
         self.btn_stop.setEnabled(False)     #cant stop before starting
 

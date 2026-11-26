@@ -128,7 +128,9 @@ class MainWindow(QMainWindow):
 
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        left_layout.addWidget(QLabel("Setup steps"))
+        steps_label = QLabel("SETUP STEPS")
+        steps_label.setObjectName("sectionLabel")
+        left_layout.addWidget(steps_label)
         left_layout.addWidget(self.step_list)
 
         #RUN MODE PANELS
@@ -193,30 +195,55 @@ class MainWindow(QMainWindow):
         self.right_stack.addWidget(right_panel)
         self.right_stack.addWidget(run_right)
 
-        #MODE BAR - SETUP / RUN
+                #HEADER BAR - TITLE, SETUP / RUN TOGGLE, CAMERA INFO
         self.btn_setup = QPushButton("Setup")
         self.btn_run = QPushButton("Run")
-        self.btn_setup.setCheckable(True)
-        self.btn_run.setCheckable(True)
-        self.btn_setup.setChecked(True)
         mode_group = QButtonGroup(self)
-        mode_group.addButton(self.btn_setup)
-        mode_group.addButton(self.btn_run)
+        for btn in (self.btn_setup, self.btn_run):
+            btn.setCheckable(True)
+            btn.setObjectName("modeBtn")
+            mode_group.addButton(btn)
+        self.btn_setup.setChecked(True)
 
-        mode_bar = QHBoxLayout()
-        mode_bar.addWidget(self.btn_setup)
-        mode_bar.addWidget(self.btn_run)
-        mode_bar.addStretch()
+        mode_toggle = QWidget()
+        mode_toggle.setObjectName("modeToggle")
+        mode_toggle.setAttribute(Qt.WA_StyledBackground, True)
+        toggle_layout = QHBoxLayout(mode_toggle)
+        toggle_layout.setContentsMargins(3, 3, 3, 3)
+        toggle_layout.setSpacing(2)
+        toggle_layout.addWidget(self.btn_setup)
+        toggle_layout.addWidget(self.btn_run)
+
+        title = QLabel("Vision Inspection")
+        title.setObjectName("appTitle")
+        self.lbl_header_info = QLabel("Camera stopped")
+        self.lbl_header_info.setObjectName("headerInfo")
+
+        header = QWidget()
+        header.setObjectName("header")
+        header.setAttribute(Qt.WA_StyledBackground, True)
+        header.setFixedHeight(52)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(20, 0, 20, 0)
+        header_layout.setSpacing(24)
+        header_layout.addWidget(title)
+        header_layout.addWidget(mode_toggle, alignment=Qt.AlignVCenter)
+        header_layout.addStretch()
+        header_layout.addWidget(self.lbl_header_info)
 
         #MAIN LAYOUT - LEFT, FEED, RIGHT
         main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(12)
         main_layout.addWidget(self.left_stack)
         main_layout.addWidget(self.label, stretch=1)
         main_layout.addWidget(self.right_stack)
 
-        #OUTER LAYOUT - MODE BAR ON TOP, MAIN BELOW
+        #OUTER LAYOUT - HEADER ON TOP, MAIN BELOW
         outer_layout = QVBoxLayout()
-        outer_layout.addLayout(mode_bar)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        outer_layout.addWidget(header)
         outer_layout.addLayout(main_layout)
 
         #CONTAINER WIDGET AND SET THE LAYOUT
@@ -334,6 +361,7 @@ class MainWindow(QMainWindow):
         self.btn_start.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.statusBar().showMessage(f"Camera Started at {w}x{h}", 5000)
+        self.lbl_header_info.setText(f"Camera running · {w}×{h}")
 
     def stop_camera(self):
         self.timer.stop()
@@ -343,6 +371,7 @@ class MainWindow(QMainWindow):
         self.label.setText("Camera Stopped")
         self.btn_start.setEnabled(True)
         self.statusBar().showMessage("Camera Stopped", 5000)  # Show message for 5 seconds
+        self.lbl_header_info.setText("Camera stopped")
 
     def update_frame(self):
         ok, frame = self.cap.read()

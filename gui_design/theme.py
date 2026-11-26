@@ -23,6 +23,8 @@ PALETTE = {
     "status": "#C9CED3",
     "pass": "#1E7A3C",
     "fail": "#B42318",
+    "header_dark": "#1F2529",
+    "section": "#5F6870",
 }
 
 def load_style():

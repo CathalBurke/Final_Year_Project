@@ -18,6 +18,7 @@ from PySide6.QtGui import QImage, QPixmap
 import os
 import time
 import numpy as np
+from gui_design.theme import load_style, PALETTE
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
         #LABEL TO DISPLAY CAMERA FEED
         self.label = QLabel("Camera Stopped")
         self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("background-color: #111")
+        self.label.setObjectName("feed")
         self.label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)  # Allow resizing
         self.label.setMinimumSize(320,180)
         
@@ -57,7 +58,8 @@ class MainWindow(QMainWindow):
         self.btn_load = QPushButton("Load Part")
         self.btn_settings = QPushButton("Settings")
         self.chk_thresh = QCheckBox("Show threshold")
-        self.btn_teach = QPushButton("Teach")      
+        self.btn_teach = QPushButton("Teach")
+        self.btn_teach.setObjectName("primary")    
         self.slider = QSlider(Qt.Horizontal)               
         self.slider.setRange(0, 255)                       
         self.slider.setValue(127)
@@ -180,11 +182,13 @@ class MainWindow(QMainWindow):
 
         #STACKS - PAGE 0 = SETUP, PAGE 1 = RUN
         self.left_stack = QStackedWidget()
+        self.left_stack.setObjectName("sidePanel")
         self.left_stack.setFixedWidth(236)
         self.left_stack.addWidget(left_panel)
         self.left_stack.addWidget(run_left)
 
         self.right_stack = QStackedWidget()
+        self.right_stack.setObjectName("sidePanel")
         self.right_stack.setFixedWidth(330)
         self.right_stack.addWidget(right_panel)
         self.right_stack.addWidget(run_right)
@@ -266,12 +270,12 @@ class MainWindow(QMainWindow):
         ok = len(fails) == 0
         if ok:
             self.lbl_result.setText("OK")
-            self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800; color: #43D17A;")
+            self.lbl_result.setStyleSheet(f"font-size: 40px; font-weight: 800; color: {PALETTE['pass']};")
             self.lbl_reason.setText(f"{len(self.results)} part(s) pass")
         else:
             reason = "out of size" if not fails[0][7] else "below shape limit"
             self.lbl_result.setText("NG")
-            self.lbl_result.setStyleSheet("font-size: 40px; font-weight: 800; color: #FF6B5E;")
+            self.lbl_result.setStyleSheet(f"font-size: 40px; font-weight: 800; color: {PALETTE['fail']};")
             self.lbl_reason.setText(f"{len(fails)} part(s) {reason}")
 
         worst = fails[0] if fails else min(self.results, key=lambda r: r[6])
@@ -306,7 +310,7 @@ class MainWindow(QMainWindow):
         self.update_counts() 
 
     def set_bar_colour(self, bar, ok):
-        colour = "#8A939B" if ok else "#FF6B5E"
+        colour = PALETTE["muted_fill"] if ok else PALETTE["fail"]
         bar.setStyleSheet(f"QProgressBar::chunk {{ background: {colour}; }}")
 
     def start_camera(self):
@@ -497,6 +501,8 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    app.setStyleSheet(load_style())
     window = MainWindow()
     window.showMaximized()
     sys.exit(app.exec())

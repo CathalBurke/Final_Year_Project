@@ -1,0 +1,35 @@
+
+QMainWindow { background: @ground; }
+
+QWidget { color: @text; font-family: "Segoe UI"; font-size: 10pt; }
+
+QStackedWidget#sidePanel { background: @panel; border: 1px solid @border; border-radius: 6px; }
+
+QGroupBox { border: none; font-weight: 600; margin-top: 20px; }
+QGroupBox::title { subcontrol-origin: margin; left: 6px; font-size: 12pt; }
+
+QPushButton { background: @button; border: 1px solid @button_border; border-radius: 5px; padding: 8px 14px; min-height: 26px; }
+QPushButton:hover { background: @button_hover; }
+QPushButton:pressed { background: @button_pressed; }
+QPushButton:disabled { color: @text_disabled; background: @panel; border-color: @border; }
+QPushButton#primary { background: @header; color: @header_text; border: none; font-weight: 600; }
+QPushButton#primary:hover { background: @header_hover; }
+
+QListWidget { background: transparent; border: none; outline: 0; }
+QListWidget::item { padding: 10px 8px; border-radius: 5px; margin: 1px 0; }
+QListWidget::item:selected { background: @header; color: @header_text; }
+QListWidget::item:hover:!selected { background: @hover; }
+QListWidget::item:disabled { color: @text_disabled; }
+
+QLabel#feed { background: @feed; border-radius: 6px; color: @header_muted; }
+
+QSlider::groove:horizontal { height: 6px; background: @track; border-radius: 3px; }
+QSlider::sub-page:horizontal { background: @muted_fill; border-radius: 3px; }
+QSlider::handle:horizontal { background: @header; width: 16px; margin: -6px 0; border-radius: 8px; }
+
+QProgressBar { background: @track; border: none; border-radius: 5px; min-height: 10px; max-height: 10px; }
+QProgressBar::chunk { background: @muted_fill; border-radius: 5px; }
+
+QCheckBox { spacing: 8px; }
+
+QStatusBar { background: @status; }
